@@ -7,4 +7,5 @@ __pycache__/
 .DS_Store
 .claude/plans/
 Prompt.txt
+CLAUDE.md
 
