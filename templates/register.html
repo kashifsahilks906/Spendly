@@ -17,17 +17,23 @@
             <div class="auth-error">{{ error }}</div>
             {% endif %}
 
+            {% if success %}
+            <div class="auth-success">{{ success }}</div>
+            {% endif %}
+
             <form method="POST" action="/register">
                 <div class="form-group">
                     <label for="name">Full name</label>
                     <input type="text" id="name" name="name"
                            class="form-input" placeholder="Nitish Kumar"
+                           value="{{ request.form.get('name', '') }}"
                            required autofocus>
                 </div>
                 <div class="form-group">
                     <label for="email">Email address</label>
                     <input type="email" id="email" name="email"
                            class="form-input" placeholder="nitish@example.com"
+                           value="{{ request.form.get('email', '') }}"
                            required>
                 </div>
                 <div class="form-group">
@@ -48,4 +54,14 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+{% if success %}
+<script>
+    setTimeout(() => {
+        window.location.href = "{{ url_for('login') }}";
+    }, 2000);
+</script>
+{% endif %}
 {% endblock %}
