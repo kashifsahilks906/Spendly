@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Spendly{% endblock %}
+
+{% block content %}
+<section class="profile-section">
+  <div class="profile-inner">
+
+    {# ---- Account header ---- #}
+    <header class="profile-head">
+      <div class="profile-avatar" aria-hidden="true">
+        {{ user["name"][:1] | upper }}
+      </div>
+      <div>
+        <h1 class="profile-name">{{ user["name"] }}</h1>
+        <p class="profile-meta">{{ user["email"] }}</p>
+        {% if member_since %}
+        <p class="profile-meta profile-meta-faint">
+          <i data-lucide="calendar"></i> Member since {{ member_since }}
+        </p>
+        {% endif %}
+      </div>
+    </header>
+
+    {% if count == 0 %}
+      {# ---- Empty state ---- #}
+      <div class="profile-empty">
+        <i data-lucide="receipt"></i>
+        <h2>No expenses yet</h2>
+        <p>Once you start logging expenses they'll show up here with a
+           category breakdown and running totals.</p>
+      </div>
+    {% else %}
+      {# ---- Summary stat cards ---- #}
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <span class="profile-stat-label"><i data-lucide="wallet"></i> Total spent</span>
+          <span class="profile-stat-value">{{ total | pkr }}</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label"><i data-lucide="list"></i> Expenses</span>
+          <span class="profile-stat-value">{{ count }}</span>
+        </div>
+        <div class="profile-stat">
+          <span class="profile-stat-label"><i data-lucide="tag"></i> Top category</span>
+          <span class="profile-stat-value">{{ top_category }}</span>
+        </div>
+      </div>
+
+      {# ---- Category breakdown ---- #}
+      <div class="profile-card">
+        <h2 class="profile-card-title"><i data-lucide="pie-chart"></i> Spending by category</h2>
+        <div class="profile-cats">
+          {% for c in categories %}
+          <div class="profile-cat">
+            <span class="profile-cat-name">{{ c.name }}</span>
+            <div class="profile-cat-track">
+              <div class="profile-cat-bar profile-cat-bar--{{ c.name | lower }}"
+                   style="width: {{ c.pct }}%"></div>
+            </div>
+            <span class="profile-cat-amount">{{ c.amount | pkr }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ---- Recent activity (read-only) ---- #}
+      <div class="profile-card">
+        <h2 class="profile-card-title"><i data-lucide="clock"></i> Recent activity</h2>
+        <ul class="profile-recent">
+          {% for r in recent %}
+          <li class="profile-recent-row">
+            <span class="profile-recent-cat">{{ r.category }}</span>
+            <span class="profile-recent-desc">{{ r.description or "—" }}</span>
+            <span class="profile-recent-date">{{ r.date }}</span>
+            <span class="profile-recent-amount">{{ r.amount | pkr }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <p class="profile-note">Adding, editing and deleting expenses arrives in a later step.</p>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}
