@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from flask import Flask, render_template, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,6 +12,18 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
 with app.app_context():
     init_db()
     seed_db()
+
+
+# ------------------------------------------------------------------ #
+# Template filters                                                    #
+# ------------------------------------------------------------------ #
+
+@app.template_filter("pkr")
+def pkr(amount):
+    try:
+        return f"PKR {float(amount):,.2f}"
+    except (TypeError, ValueError):
+        return "PKR 0.00"
 
 
 # ------------------------------------------------------------------ #
@@ -105,7 +118,65 @@ def privacy():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    user = conn.execute(
+        "SELECT id, name, email, created_at FROM users WHERE id = ?",
+        (session["user_id"],),
+    ).fetchone()
+    if user is None:                      # stale session -> force re-login
+        conn.close()
+        session.clear()
+        return redirect(url_for("login"))
+
+    rows = conn.execute(
+        "SELECT amount, category, date, description FROM expenses "
+        "WHERE user_id = ? ORDER BY date DESC, id DESC",
+        (session["user_id"],),
+    ).fetchall()
+    conn.close()
+
+    total = sum(r["amount"] for r in rows)
+    count = len(rows)
+
+    by_cat = {}
+    for r in rows:
+        by_cat[r["category"]] = by_cat.get(r["category"], 0) + r["amount"]
+    categories = sorted(
+        (
+            {
+                "name": name,
+                "amount": amt,
+                "pct": round(amt / total * 100) if total else 0,
+            }
+            for name, amt in by_cat.items()
+        ),
+        key=lambda c: c["amount"],
+        reverse=True,
+    )
+    top_category = categories[0]["name"] if categories else None
+
+    member_since = None
+    if user["created_at"]:
+        try:
+            member_since = datetime.strptime(
+                user["created_at"], "%Y-%m-%d %H:%M:%S"
+            ).strftime("%B %Y")
+        except ValueError:
+            member_since = user["created_at"][:10]
+
+    return render_template(
+        "profile.html",
+        user=user,
+        member_since=member_since,
+        total=total,
+        count=count,
+        categories=categories,
+        top_category=top_category,
+        recent=rows[:6],
+    )
 
 
 @app.route("/expenses/add")
