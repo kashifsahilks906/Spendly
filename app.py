@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 from flask import Flask, render_template, request, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -116,6 +116,42 @@ def privacy():
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
 
+def _active_range(args):
+    """Parse ?start / ?end query args into (start_iso, end_iso, label).
+
+    Returns (None, None, None) unless both values parse as YYYY-MM-DD and
+    start <= end, so malformed, partial or reversed input falls back to the
+    unfiltered view rather than erroring or half-applying a filter.
+    """
+    def _parse_date(value):
+        try:
+            return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+        except ValueError:
+            return None
+
+    start_date = _parse_date(args.get("start", ""))
+    end_date = _parse_date(args.get("end", ""))
+    if not (start_date and end_date and start_date <= end_date):
+        return None, None, None
+
+    label = f'{start_date:%d %b %Y} – {end_date:%d %b %Y}'
+    return start_date.isoformat(), end_date.isoformat(), label
+
+
+def _date_presets(today):
+    """One-click date ranges for the profile filter bar."""
+    if today.month == 12:
+        month_end = today.replace(day=31)
+    else:
+        # first day of next month, minus one day
+        month_end = today.replace(month=today.month + 1, day=1) - timedelta(days=1)
+    return [
+        {"label": "This month", "start": today.replace(day=1).isoformat(), "end": month_end.isoformat()},
+        {"label": "Last 30 days", "start": (today - timedelta(days=29)).isoformat(), "end": today.isoformat()},
+        {"label": "This year", "start": date(today.year, 1, 1).isoformat(), "end": date(today.year, 12, 31).isoformat()},
+    ]
+
+
 @app.route("/profile")
 def profile():
     if not session.get("user_id"):
@@ -131,11 +167,17 @@ def profile():
         session.clear()
         return redirect(url_for("login"))
 
-    rows = conn.execute(
-        "SELECT amount, category, date, description FROM expenses "
-        "WHERE user_id = ? ORDER BY date DESC, id DESC",
-        (session["user_id"],),
-    ).fetchall()
+    start, end, range_label = _active_range(request.args)
+
+    query = "SELECT amount, category, date, description FROM expenses WHERE user_id = ?"
+    params = [session["user_id"]]
+    if start and end:
+        # expenses.date is a zero-padded YYYY-MM-DD string, so this lexicographic
+        # compare via bind params is an inclusive calendar-date range.
+        query += " AND date >= ? AND date <= ?"
+        params += [start, end]
+    query += " ORDER BY date DESC, id DESC"
+    rows = conn.execute(query, params).fetchall()
     conn.close()
 
     total = sum(r["amount"] for r in rows)
@@ -167,6 +209,8 @@ def profile():
         except ValueError:
             member_since = user["created_at"][:10]
 
+    presets = _date_presets(date.today())
+
     return render_template(
         "profile.html",
         user=user,
@@ -176,6 +220,10 @@ def profile():
         categories=categories,
         top_category=top_category,
         recent=rows[:6],
+        start=start,
+        end=end,
+        range_label=range_label,
+        presets=presets,
     )
 
 

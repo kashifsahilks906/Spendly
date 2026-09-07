@@ -22,13 +22,50 @@
       </div>
     </header>
 
+    {# ---- Date filter ---- #}
+    <form class="profile-filter" method="get" action="{{ url_for('profile') }}">
+      <div class="profile-filter-fields">
+        <label class="profile-filter-field">
+          <span>From</span>
+          <input type="date" name="start" value="{{ start or '' }}"
+                 class="form-input profile-filter-input">
+        </label>
+        <label class="profile-filter-field">
+          <span>To</span>
+          <input type="date" name="end" value="{{ end or '' }}"
+                 class="form-input profile-filter-input">
+        </label>
+        <button type="submit" class="btn-submit profile-filter-apply">Apply</button>
+      </div>
+      <div class="profile-filter-presets">
+        {% for p in presets %}
+        <a class="profile-filter-preset"
+           href="{{ url_for('profile', start=p.start, end=p.end) }}">{{ p.label }}</a>
+        {% endfor %}
+        <a class="profile-filter-preset" href="{{ url_for('profile') }}">All time</a>
+      </div>
+    </form>
+
+    {% if range_label %}
+    <p class="profile-filter-active">
+      Showing {{ range_label }}
+      <a href="{{ url_for('profile') }}">Clear</a>
+    </p>
+    {% endif %}
+
     {% if count == 0 %}
       {# ---- Empty state ---- #}
       <div class="profile-empty">
         <i data-lucide="receipt"></i>
-        <h2>No expenses yet</h2>
-        <p>Once you start logging expenses they'll show up here with a
-           category breakdown and running totals.</p>
+        {% if range_label %}
+          <h2>No expenses in this range</h2>
+          <p>Nothing matched {{ range_label }}. Try a wider range, or use
+             Clear above to see all time.</p>
+        {% else %}
+          <h2>No expenses yet</h2>
+          <p>Once you start logging expenses they'll show up here with a
+             category breakdown and running totals.</p>
+        {% endif %}
       </div>
     {% else %}
       {# ---- Summary stat cards ---- #}
