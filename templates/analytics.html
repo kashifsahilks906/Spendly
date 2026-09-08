@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block content %}
+<section class="analytics-section">
+  <div class="coming-soon">
+
+    {# ---- Icon tile ---- #}
+    <div class="coming-soon-icon" aria-hidden="true">
+      <i data-lucide="clock"></i>
+    </div>
+
+    {# ---- Badge ---- #}
+    <span class="coming-soon-badge">Coming Soon</span>
+
+    {# ---- Heading + copy ---- #}
+    <h1 class="coming-soon-title">Advanced Analytics</h1>
+    <p class="coming-soon-text">
+      We're working on powerful insights and visualizations to help you
+      understand your spending patterns better.
+    </p>
+
+    {# ---- Progress indicator ---- #}
+    <div class="coming-soon-dots" aria-hidden="true">
+      <span class="coming-soon-dot"></span>
+      <span class="coming-soon-dot"></span>
+      <span class="coming-soon-dot"></span>
+    </div>
+    <p class="coming-soon-note">We're crafting something special</p>
+
+    <span class="coming-soon-line" aria-hidden="true"></span>
+  </div>
+</section>
+{% endblock %}
