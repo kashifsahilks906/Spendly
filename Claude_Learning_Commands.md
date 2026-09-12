@@ -64,6 +64,11 @@ Expected:
 github · ✓ connected
 ```
 
+### 5.Auto commit merge and PR prompt
+```text
+Commit all changes with an appropriate conventional commit message and dont add your signature like email etc, push to the current feature branch, create a pull request into main with a proper title and description based on the spec, merge it using squash merge, switch to main, pull latest
+```
+
 ---
 
 ## Figma MCP Server
