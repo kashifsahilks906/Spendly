@@ -20,6 +20,7 @@
         </p>
         {% endif %}
       </div>
+      <a class="btn-submit profile-add-expense" href="{{ url_for('add_expense') }}">Add expense</a>
     </header>
 
     {# ---- Date filter ---- #}
@@ -114,7 +115,7 @@
           </li>
           {% endfor %}
         </ul>
-        <p class="profile-note">Adding, editing and deleting expenses arrives in a later step.</p>
+        <p class="profile-note">Editing and deleting expenses arrives in a later step.</p>
       </div>
     {% endif %}
 
