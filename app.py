@@ -139,6 +139,38 @@ def _active_range(args):
     return start_date.isoformat(), end_date.isoformat(), label
 
 
+def _validate_expense_form(form):
+    """Validate submitted amount/category/date/description fields.
+
+    Returns (amount, category, expense_date, description, error). error is
+    None when valid; the other fields are only meaningful when it is.
+    """
+    amount_raw = form.get("amount", "").strip()
+    category = form.get("category", "").strip()
+    expense_date = form.get("date", "").strip()
+    description = form.get("description", "").strip() or None
+
+    error = None
+    amount = None
+    try:
+        amount = float(amount_raw)
+        if not math.isfinite(amount) or amount <= 0:
+            error = "Amount must be greater than zero."
+    except ValueError:
+        error = "Please enter a valid amount."
+
+    if not error and category not in CATEGORIES:
+        error = "Please choose a valid category."
+
+    if not error:
+        try:
+            datetime.strptime(expense_date, "%Y-%m-%d")
+        except ValueError:
+            error = "Please enter a valid date."
+
+    return amount, category, expense_date, description, error
+
+
 def _date_presets(today):
     """One-click date ranges for the profile filter bar."""
     if today.month == 12:
@@ -170,7 +202,7 @@ def profile():
 
     start, end, range_label = _active_range(request.args)
 
-    query = "SELECT amount, category, date, description FROM expenses WHERE user_id = ?"
+    query = "SELECT id, amount, category, date, description FROM expenses WHERE user_id = ?"
     params = [session["user_id"]]
     if start and end:
         # expenses.date is a zero-padded YYYY-MM-DD string, so this lexicographic
@@ -247,28 +279,7 @@ def add_expense():
             today=date.today().isoformat(),
         )
 
-    amount_raw = request.form.get("amount", "").strip()
-    category = request.form.get("category", "").strip()
-    expense_date = request.form.get("date", "").strip()
-    description = request.form.get("description", "").strip() or None
-
-    error = None
-    amount = None
-    try:
-        amount = float(amount_raw)
-        if not math.isfinite(amount) or amount <= 0:
-            error = "Amount must be greater than zero."
-    except ValueError:
-        error = "Please enter a valid amount."
-
-    if not error and category not in CATEGORIES:
-        error = "Please choose a valid category."
-
-    if not error:
-        try:
-            datetime.strptime(expense_date, "%Y-%m-%d")
-        except ValueError:
-            error = "Please enter a valid date."
+    amount, category, expense_date, description, error = _validate_expense_form(request.form)
 
     if error:
         return render_template(
@@ -292,9 +303,51 @@ def add_expense():
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    expense = conn.execute(
+        "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
+        (id, session["user_id"]),
+    ).fetchone()
+
+    if expense is None:
+        conn.close()
+        return redirect(url_for("profile"))
+
+    if request.method == "GET":
+        conn.close()
+        return render_template(
+            "edit_expense.html",
+            expense=expense,
+            categories=CATEGORIES,
+        )
+
+    amount, category, expense_date, description, error = _validate_expense_form(request.form)
+
+    if error:
+        conn.close()
+        return render_template(
+            "edit_expense.html",
+            expense=expense,
+            categories=CATEGORIES,
+            error=error,
+        )
+
+    try:
+        conn.execute(
+            "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? "
+            "WHERE id = ? AND user_id = ?",
+            (amount, category, expense_date, description, id, session["user_id"]),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/delete")
