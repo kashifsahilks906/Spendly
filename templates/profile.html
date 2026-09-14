@@ -112,10 +112,11 @@
             <span class="profile-recent-desc">{{ r.description or "—" }}</span>
             <span class="profile-recent-date">{{ r.date }}</span>
             <span class="profile-recent-amount">{{ r.amount | pkr }}</span>
+            <a class="profile-recent-edit" href="{{ url_for('edit_expense', id=r.id) }}">Edit</a>
           </li>
           {% endfor %}
         </ul>
-        <p class="profile-note">Editing and deleting expenses arrives in a later step.</p>
+        <p class="profile-note">Deleting expenses arrives in a later step.</p>
       </div>
     {% endif %}
 
